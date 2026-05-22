@@ -10,6 +10,37 @@ export interface VoiceMDSettings {
 	language?: string;
 	maxRecordingDuration: number;
 	autoStartRecording: boolean;
+	failedAudioRetentionDays: number;
+	dailyNoteFolder: string;
+	dailyNoteFormat: string;
+}
+
+export interface VoiceMDStoredData {
+	schemaVersion: 2;
+	settings: VoiceMDSettings;
+	jobs: TranscriptionJob[];
+}
+
+export type TranscriptionJobStatus = 'pending' | 'processing' | 'failed' | 'succeeded';
+
+export interface TranscriptionJob {
+	id: string;
+	audioKey: string;
+	mimeType: string;
+	size: number;
+	createdAt: number;
+	updatedAt: number;
+	status: TranscriptionJobStatus;
+	attempts: number;
+	lastError?: string;
+	retryable: boolean;
+	meetingMode: boolean;
+	enablePostProcessing: boolean;
+	language?: string;
+	chatModel: string;
+	postProcessingPrompt?: string;
+	rawPath?: string;
+	structuredPath?: string;
 }
 
 export interface RecordingState {
@@ -57,7 +88,8 @@ export type VoiceMDErrorType =
 	| { type: 'API_ERROR'; code: string; message: string }
 	| { type: 'NETWORK_ERROR'; message: string }
 	| { type: 'INVALID_API_KEY'; message: string }
-	| { type: 'POST_PROCESSING_ERROR'; message: string };
+	| { type: 'POST_PROCESSING_ERROR'; message: string }
+	| { type: 'AUDIO_TOO_LARGE'; message: string };
 
 /**
  * Custom Error class for Voice MD plugin errors

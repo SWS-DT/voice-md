@@ -5,6 +5,25 @@ All notable changes to Voice MD will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - Unreleased
+
+### Added
+- iOS Shortcut / Action Button support via `obsidian://voice-md` URLs for daily-note recording.
+- Mobile reliability foundation with durable local audio persistence after recording stops.
+- Persisted retry queue for failed or offline transcription attempts.
+- Command and settings affordances to discover and retry pending transcriptions.
+- Failed/pending audio retention setting with successful audio deletion after completion.
+- Runtime SecretStorage API-key migration when supported by Obsidian.
+
+### Changed
+- Raw transcript files are saved before optional structured-note generation.
+- Post-processing failures keep the raw transcript instead of dropping the result.
+- Transcription output folder creation is more reliable and file names avoid collisions.
+
+### Fixed
+- Added an OpenAI 25 MB transcription upload guard with clearer user feedback.
+- Improved browser/mobile network failure classification for retryable jobs.
+
 ## [1.2.6] - 2025-11-06
 
 ### Fixed

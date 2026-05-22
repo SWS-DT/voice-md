@@ -52,6 +52,9 @@ export class ErrorHandler {
 			case 'POST_PROCESSING_ERROR':
 				return `Post-processing failed: ${error.message}. Saved raw transcription only.`;
 
+			case 'AUDIO_TOO_LARGE':
+				return error.message;
+
 			default:
 				return 'An unknown error occurred';
 		}
@@ -118,7 +121,7 @@ export class ErrorHandler {
 					message: 'OpenAI service is temporarily unavailable. Please try again later.'
 				};
 			}
-		} else if (error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT') {
+		} else if (error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT' || this.isBrowserNetworkError(error.message)) {
 			errorInfo = {
 				type: 'NETWORK_ERROR',
 				message: 'Unable to reach OpenAI servers. Please check your internet connection.'
@@ -137,5 +140,20 @@ export class ErrorHandler {
 		}
 
 		return new VoiceMDError(errorInfo);
+	}
+
+	static audioTooLarge(actualBytes: number, maxBytes: number): VoiceMDError {
+		const actualMb = (actualBytes / 1024 / 1024).toFixed(1);
+		const maxMb = Math.floor(maxBytes / 1024 / 1024);
+		return new VoiceMDError({
+			type: 'AUDIO_TOO_LARGE',
+			message: `Recording is ${actualMb} MB, above OpenAI's ${maxMb} MB transcription limit. Please record a shorter clip.`,
+		});
+	}
+
+	private static isBrowserNetworkError(message?: string): boolean {
+		if (!message) return false;
+		const normalized = message.toLowerCase();
+		return normalized.includes('failed to fetch') || normalized.includes('networkerror') || normalized.includes('network error') || normalized.includes('load failed');
 	}
 }

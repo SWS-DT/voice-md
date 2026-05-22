@@ -48,6 +48,26 @@ Both checkboxes default to your global settings and persist changes back — so 
 
 Works on iOS and Android. Audio format detection adapts to your platform (WebM on desktop, MP4 on iOS, OGG/WAV as fallback).
 
+Stopped recordings are saved locally before transcription starts. If the network drops or transcription fails, Voice MD keeps a retryable pending job so you can reopen Obsidian and run **Retry pending voice transcriptions** from the command palette.
+
+### iOS Shortcut / Action Button
+
+Voice MD registers an Obsidian URL action that you can run from iOS Shortcuts. Recording only starts when the URL explicitly includes both `record=true` and `autostart=true`:
+
+```text
+obsidian://voice-md?record=true&daily=true&autostart=true
+```
+
+Set **Daily note folder** and **Daily note date format** in **Settings → Voice MD** to match your Daily Notes settings. The URL opens or creates today's note, waits for the editor, and starts recording immediately. A bare `obsidian://voice-md` URL is ignored, and `record=true` without `autostart=true` opens the recording modal without starting the microphone. In multi-vault setups, include `vault=Your%20Vault` if needed and test on your device.
+
+You can also compute the file path in Shortcuts and pass it explicitly:
+
+```text
+obsidian://voice-md?record=true&file=Daily%2F2026-05-22.md&autostart=true
+```
+
+Add a Shortcut with **Open URLs**, paste one of the URLs above, then assign it to the Action Button in iOS settings. Treat URLs with `record=true&autostart=true` like microphone triggers: only place them in trusted Shortcuts or links. Obsidian still needs microphone permission; if permission is revoked, iOS/Obsidian will prompt or block recording.
+
 ## Settings
 
 **Settings → Voice MD**
@@ -57,6 +77,9 @@ Works on iOS and Android. Audio format detection adapts to your platform (WebM o
 | OpenAI API key | Required. [Get one here](https://platform.openai.com/api-keys) | — |
 | Max recording duration | Maximum seconds per recording | 300 |
 | Auto-start recording | Start recording immediately when the modal opens | Off |
+| Retain failed audio | Days to keep local audio for pending/failed retry jobs. Successful audio is deleted after completion | 7 |
+| Daily note folder | Folder used by `obsidian://voice-md?...daily=true` shortcuts | Vault root |
+| Daily note date format | Date format used by daily-note shortcuts | `YYYY-MM-DD` |
 | Language | Force a language code, or leave blank for auto-detect | Auto |
 | Enable post-processing | Default for the post-processing checkbox | Off |
 | Chat model | GPT model used for post-processing | `gpt-4o-mini` |
@@ -83,10 +106,13 @@ Works on iOS and Android. Audio format detection adapts to your platform (WebM o
 
 ## Privacy
 
-- Audio is sent to OpenAI for transcription only — never stored on disk or written to your vault
+- Stopped recordings are stored locally in browser IndexedDB before transcription so failed mobile/network attempts can be retried
+- Successful recordings are deleted from local audio storage after the job completes; failed or pending audio is retained for the configured number of days
+- Audio is sent to OpenAI for transcription. Voice MD blocks uploads above OpenAI's 25 MB transcription limit
+- Raw transcripts are saved to your vault in `Voice Transcriptions/` before optional structured-note generation
 - Post-processing sends the transcript text to OpenAI if enabled
-- Your API key stays in local Obsidian storage
-- No telemetry, no tracking, no third-party services
+- Your API key is migrated to Obsidian SecretStorage when available; older Obsidian versions fall back to local plugin data
+- No telemetry, no tracking, no third-party services beyond OpenAI requests you initiate
 
 ## Troubleshooting
 
@@ -94,7 +120,7 @@ Works on iOS and Android. Audio format detection adapts to your platform (WebM o
 |---------|-----|
 | No API key error | Add your [OpenAI API key](https://platform.openai.com/api-keys) in settings |
 | Recording won't start | Grant microphone permission to Obsidian in your OS settings |
-| Transcription fails | Check that your API key is valid and your OpenAI account has credits |
+| Transcription fails | Check that your API key is valid and your OpenAI account has credits. If audio was saved, run **Retry pending voice transcriptions** after fixing the issue |
 | No speaker labels | Meeting mode works best with 2–6 speakers and recordings over 30 seconds |
 
 For anything else, open an [issue](https://github.com/DenizOkcu/voice-md/issues).

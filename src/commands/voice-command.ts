@@ -1,39 +1,38 @@
-import { App, Editor, Notice, normalizePath, Plugin } from 'obsidian';
+import { App, Editor, Notice, Plugin } from 'obsidian';
 import { RecordingModal } from '../audio/audio-modal';
 import { OpenAIClient } from '../api/openai-client';
 import { ErrorHandler } from '../utils/error-handler';
-import { VoiceMDSettings } from '../types';
+import { TranscriptionJob, VoiceMDError, VoiceMDSettings } from '../types';
+import { IndexedDBAudioStore } from '../storage/indexeddb-audio-store';
+import { JobQueue, isRetryableJobError } from '../jobs/job-queue';
+import { TranscriptionFiles } from '../output/transcription-files';
+import { ApiKeyStore } from '../secrets/api-key-store';
 
 /**
  * VoiceCommand orchestrates the voice recording workflow:
- * Recording → Transcription → Insertion into editor
+ * Recording → Durable queue → Transcription → Raw save → Optional structure → Insertion
  */
+export interface VoiceCommandOptions {
+	autoStart?: boolean;
+}
+
 export class VoiceCommand {
-	private app: App;
-	private plugin: Plugin;
-	private settings: VoiceMDSettings;
+	constructor(
+		private readonly app: App,
+		private readonly plugin: Plugin,
+		private readonly settings: VoiceMDSettings,
+		private readonly audioStore: IndexedDBAudioStore,
+		private readonly jobQueue: JobQueue,
+		private readonly apiKeyStore: ApiKeyStore
+	) {}
 
-	constructor(app: App, plugin: Plugin, settings: VoiceMDSettings) {
-		this.app = app;
-		this.plugin = plugin;
-		this.settings = settings;
-	}
-
-	/**
-	 * Execute the voice recording command
-	 * @param editor The active editor instance
-	 */
-	execute(editor: Editor): void {
-		// Pre-flight check: Verify API key exists
-		if (!this.settings.openaiApiKey || this.settings.openaiApiKey.trim() === '') {
-			new Notice(
-				'OpenAI API key not configured, please set it in Voice MD settings',
-				6000
-			);
+	execute(editor: Editor, options?: VoiceCommandOptions): void {
+		const apiKey = this.apiKeyStore.getApiKey();
+		if (!apiKey.trim()) {
+			new Notice('OpenAI API key not configured, please set it in Voice MD settings', 6000);
 			return;
 		}
 
-		// Open recording modal
 		const modal = new RecordingModal(
 			this.app,
 			this.plugin,
@@ -42,156 +41,122 @@ export class VoiceCommand {
 			async (audioBlob, meetingMode, enablePostProcessing) => {
 				await this.handleRecording(audioBlob, editor, meetingMode, enablePostProcessing);
 			},
-			this.settings.autoStartRecording
+			options?.autoStart ?? this.settings.autoStartRecording
 		);
 
 		modal.open();
 	}
 
-	/**
-	 * Handle the recorded audio blob: transcribe and insert into editor
-	 */
+	async retryPending(editor?: Editor): Promise<void> {
+		const jobs = this.jobQueue.listRetryable();
+		if (jobs.length === 0) {
+			new Notice('No pending Voice MD transcriptions to retry', 3000);
+			return;
+		}
+
+		new Notice(`Retrying ${jobs.length} Voice MD transcription${jobs.length === 1 ? '' : 's'}...`, 4000);
+		for (const job of jobs) {
+			await this.processJob(job, editor);
+		}
+	}
+
 	private async handleRecording(audioBlob: Blob, editor: Editor, meetingMode: boolean, enablePostProcessing: boolean): Promise<void> {
-		// Show processing notice
-		let notice = new Notice('Transcribing audio...', 0); // 0 = don't auto-dismiss
-
+		let notice = new Notice('Saving recording safely...', 0);
 		try {
-			// Create OpenAI client
-			const client = new OpenAIClient(this.settings.openaiApiKey);
+			const audioKey = `audio-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+			await this.audioStore.put(audioKey, audioBlob);
+			const job = await this.jobQueue.enqueue({
+				audioKey,
+				mimeType: audioBlob.type,
+				size: audioBlob.size,
+				meetingMode,
+				enablePostProcessing,
+				language: this.settings.language,
+				chatModel: this.settings.chatModel,
+				postProcessingPrompt: this.settings.postProcessingPrompt,
+			});
 
-			// Transcribe audio
-			const result = await client.transcribe(
-				audioBlob,
-				{ language: this.settings.language },
-				meetingMode
-			);
-
-			// Check if transcription is empty
-			if (!result.text || result.text.trim() === '') {
-				notice.hide();
-				new Notice('Transcription was empty', 3000);
-				return;
-			}
-
-			// Format with speaker labels if meeting mode enabled
-			let formattedText = result.text;
-			if (meetingMode && result.segments) {
-				formattedText = this.formatWithSpeakers(result.segments);
-			}
-
-			// Check if post-processing is enabled (from modal checkbox)
-			if (enablePostProcessing) {
-				// Update notice to show structuring
-				notice.hide();
-				notice = new Notice('Structuring text...', 0);
-
-				try {
-					// Structure the text using chat completions
-					const structuredText = await client.structureText(
-						formattedText,
-						this.settings.chatModel,
-						this.settings.postProcessingPrompt
-					);
-
-					// Hide processing notice
-					notice.hide();
-
-					// Create both raw and structured files
-					await this.createTranscriptionFiles(
-						formattedText,
-						structuredText
-					);
-
-					// Insert structured text at cursor position (backward compatibility)
-					editor.replaceSelection(structuredText);
-
-					// Show success notice with file links
-					new Notice(
-						'Transcription complete, files saved to voice transcriptions',
-						5000
-					);
-
-				} catch (postProcessingError) {
-					// Post-processing failed, fallback to raw-only mode
-					notice.hide();
-
-					// Insert raw text at cursor
-					editor.replaceSelection(formattedText);
-
-					// Handle error (will show user-friendly message)
-					ErrorHandler.handle(postProcessingError);
-				}
-			} else {
-				// Post-processing disabled, use current behavior
-				notice.hide();
-
-				// Insert transcribed text at cursor position
-				editor.replaceSelection(formattedText);
-
-				// Show success notice
-				new Notice('Transcription complete', 3000);
-			}
-
-		} catch (error) {
-			// Hide processing notice
 			notice.hide();
-
-			// Handle error with user-friendly message
+			notice = new Notice('Transcribing audio...', 0);
+			await this.processJob(job, editor, notice);
+		} catch (error) {
+			notice.hide();
 			ErrorHandler.handle(error);
 		}
 	}
 
-	/**
-	 * Create both raw and structured transcription files with cross-links
-	 * @param rawText The raw transcription text
-	 * @param structuredText The structured markdown text
-	 * @returns Object containing paths to both created files
-	 */
-	private async createTranscriptionFiles(
-		rawText: string,
-		structuredText: string
-	): Promise<{ rawPath: string; structuredPath: string }> {
-		// Generate timestamp for file naming
-		const now = new Date();
-		const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+	private async processJob(job: TranscriptionJob, editor?: Editor, notice?: Notice): Promise<void> {
+		let activeNotice = notice ?? new Notice('Transcribing audio...', 0);
+		try {
+			const apiKey = this.apiKeyStore.getApiKey();
+			if (!apiKey.trim()) throw new Error('OpenAI API key not configured.');
 
-		// Define folder path
-		const folderPath = normalizePath('Voice Transcriptions');
+			const processingJob = await this.jobQueue.markProcessing(job.id);
+			if (!processingJob) {
+				activeNotice.hide();
+				return;
+			}
 
-		// Check if folder exists, create if not
-		const folderExists = this.app.vault.getAbstractFileByPath(folderPath);
-		if (!folderExists) {
-			await this.app.vault.create(folderPath, '');
+			const audioBlob = await this.audioStore.get(processingJob.audioKey);
+			if (!audioBlob) {
+				await this.jobQueue.markFailed(processingJob.id, 'Saved audio is missing from local storage.', false);
+				activeNotice.hide();
+				new Notice('Saved audio is missing for a pending Voice MD job.', 6000);
+				return;
+			}
+
+			const client = new OpenAIClient(apiKey);
+			const result = await client.transcribe(audioBlob, { language: processingJob.language }, processingJob.meetingMode);
+			if (!result.text?.trim()) {
+				await this.jobQueue.markFailed(processingJob.id, 'Transcription was empty.', false);
+				activeNotice.hide();
+				new Notice('Transcription was empty', 3000);
+				return;
+			}
+
+			let formattedText = result.text;
+			if (processingJob.meetingMode && result.segments) {
+				formattedText = this.formatWithSpeakers(result.segments);
+			}
+
+			const files = new TranscriptionFiles(this.app);
+			const raw = await files.saveRaw(formattedText);
+			let structuredPath: string | undefined;
+			let insertionText = formattedText;
+
+			if (processingJob.enablePostProcessing) {
+				activeNotice.hide();
+				activeNotice = new Notice('Structuring text...', 0);
+				try {
+					const structuredText = await client.structureText(formattedText, processingJob.chatModel, processingJob.postProcessingPrompt);
+					structuredPath = await files.saveStructured(structuredText, raw.rawPath, raw.baseName);
+					insertionText = structuredText;
+				} catch (postProcessingError) {
+					ErrorHandler.handle(postProcessingError);
+				}
+			}
+
+			if (editor) editor.replaceSelection(insertionText);
+			await this.jobQueue.markSucceeded(processingJob.id, raw.rawPath, structuredPath);
+			await this.audioStore.delete(processingJob.audioKey).catch(() => undefined);
+			activeNotice.hide();
+			new Notice(processingJob.enablePostProcessing ? 'Transcription complete, files saved to Voice Transcriptions' : 'Transcription complete, raw file saved', 5000);
+		} catch (error) {
+			activeNotice.hide();
+			const retryable = error instanceof VoiceMDError ? isRetryableJobError(error.errorType) : true;
+			await this.jobQueue.markFailed(job.id, error instanceof Error ? error.message : String(error), retryable);
+			ErrorHandler.handle(error);
+			if (retryable) new Notice('Recording was saved. Retry later with the Voice MD retry command.', 8000);
 		}
-
-		// Define file paths
-		const rawPath = `${folderPath}/transcription-${timestamp}-raw.md`;
-		const structuredPath = `${folderPath}/transcription-${timestamp}.md`;
-
-		// Create raw file
-		await this.app.vault.create(rawPath, rawText);
-
-		// Create structured file with cross-link to raw
-		const structuredContent = `> Raw transcription: [[transcription-${timestamp}-raw]]\n\n${structuredText}`;
-		await this.app.vault.create(structuredPath, structuredContent);
-
-		return { rawPath, structuredPath };
 	}
 
-	/**
-	 * Format transcription segments with speaker labels
-	 * @param segments Array of transcription segments with speaker information
-	 * @returns Formatted text with speaker labels
-	 */
 	private formatWithSpeakers(segments: Array<{text: string; speaker?: string}>): string {
-		let currentSpeaker: string | undefined = undefined;
+		let currentSpeaker: string | undefined;
 		let formatted = '';
 
 		for (const segment of segments) {
 			if (segment.speaker && segment.speaker !== currentSpeaker) {
-				// Speaker changed
 				currentSpeaker = segment.speaker;
-				// Convert speaker letter (A, B, C...) to display format (Speaker A, Speaker B, etc.)
 				formatted += `\n\n**Speaker ${segment.speaker}:** `;
 			}
 			formatted += segment.text.trim() + ' ';

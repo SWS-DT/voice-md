@@ -5,6 +5,8 @@ import { ErrorHandler } from '../utils/error-handler';
 /**
  * OpenAIClient handles communication with the OpenAI Audio Transcription API
  */
+export const OPENAI_TRANSCRIPTION_MAX_BYTES = 25 * 1024 * 1024;
+
 export class OpenAIClient {
 	private client: OpenAI;
 
@@ -28,8 +30,12 @@ export class OpenAIClient {
 		enableMeetingMode?: boolean
 	): Promise<TranscriptionResult> {
 		try {
+			if (audioBlob.size > OPENAI_TRANSCRIPTION_MAX_BYTES) {
+				throw new Error(`AUDIO_TOO_LARGE:${audioBlob.size}`);
+			}
+
 			// Convert Blob to File (required by OpenAI SDK)
-			const audioFile = new File([audioBlob], 'recording.webm', {
+			const audioFile = new File([audioBlob], `recording.${this.extensionForType(audioBlob.type)}`, {
 				type: audioBlob.type
 			});
 
@@ -71,9 +77,20 @@ export class OpenAIClient {
 			};
 
 		} catch (error) {
+			if (error instanceof Error && error.message.startsWith('AUDIO_TOO_LARGE:')) {
+				throw ErrorHandler.audioTooLarge(audioBlob.size, OPENAI_TRANSCRIPTION_MAX_BYTES);
+			}
 			// Convert to VoiceMDError and throw
 			throw ErrorHandler.fromOpenAIError(error);
 		}
+	}
+
+	private extensionForType(mimeType: string): string {
+		if (mimeType.includes('mp4')) return 'mp4';
+		if (mimeType.includes('ogg')) return 'ogg';
+		if (mimeType.includes('wav')) return 'wav';
+		if (mimeType.includes('mpeg')) return 'mp3';
+		return 'webm';
 	}
 
 	/**

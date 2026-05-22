@@ -79,9 +79,10 @@ export class RecordingModal extends Modal {
 		// Wire change handler - updates both instance state and global settings
 		postProcessingCheckbox.addEventListener('change', () => {
 			this.postProcessingEnabled = postProcessingCheckbox.checked;
-			// Update global setting
+			// Update global setting when the plugin exposes schema-aware settings persistence.
 			this.settings.enablePostProcessing = postProcessingCheckbox.checked;
-			void this.plugin.saveData(this.settings);
+			const settingsPlugin = this.plugin as Plugin & { saveSettings?: () => Promise<void> };
+			void settingsPlugin.saveSettings?.();
 		});
 
 		// Max duration info
