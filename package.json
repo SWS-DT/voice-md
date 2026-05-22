@@ -1,7 +1,7 @@
 {
   "name": "obsidian-voice-md",
-  "version": "1.3.2",
-  "description": "Record audio and transcribe it to markdown using OpenAI Audio Transcription API",
+  "version": "1.4.0",
+  "description": "Capture voice notes, meetings, and daily-note recordings as reliable Markdown using OpenAI",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",

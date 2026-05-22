@@ -5,10 +5,11 @@ All notable changes to Voice MD will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.4.0] - Unreleased
+## [1.4.0] - 2026-05-22
 
 ### Added
-- iOS Shortcut / Action Button support via `obsidian://voice-md` URLs for daily-note recording.
+- iOS Shortcut and Action Button support via explicit `obsidian://voice-md` URLs for daily-note recording.
+- Daily-note shortcut settings for folder, date format, and 24-hour vs am/pm appended recording timestamps.
 - Mobile reliability foundation with durable local audio persistence after recording stops.
 - Persisted retry queue for failed or offline transcription attempts.
 - Command and settings affordances to discover and retry pending transcriptions.
@@ -16,13 +17,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Runtime SecretStorage API-key migration when supported by Obsidian.
 
 ### Changed
+- Normal voice notes are inserted as a new paragraph at the current cursor.
+- URL-triggered daily-note recordings are appended to the end of the target note under a time-only heading.
 - Raw transcript files are saved before optional structured-note generation.
 - Post-processing failures keep the raw transcript instead of dropping the result.
+- Removed the fixed post-processing completion-token cap so long meeting outputs are less likely to be truncated.
 - Transcription output folder creation is more reliable and file names avoid collisions.
+- README rewritten around quick capture, mobile reliability, iOS shortcuts, and transparent AI data flow.
 
 ### Fixed
 - Added an OpenAI 25 MB transcription upload guard with clearer user feedback.
 - Improved browser/mobile network failure classification for retryable jobs.
+- Prevented the settings tab from freezing by avoiding SecretStorage reads during settings rendering and saving API keys on field change instead of every keystroke.
 
 ## [1.2.6] - 2025-11-06
 
@@ -135,6 +141,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OpenAI SDK v4.20.0 integration
 - Desktop-only initial release (changed in 1.0.1)
 
+[1.4.0]: https://github.com/DenizOkcu/voice-md/releases/tag/1.4.0
 [1.2.6]: https://github.com/DenizOkcu/voice-md/releases/tag/1.2.6
 [1.2.3]: https://github.com/DenizOkcu/voice-md/releases/tag/1.2.3
 [1.2.2]: https://github.com/DenizOkcu/voice-md/releases/tag/1.2.2
