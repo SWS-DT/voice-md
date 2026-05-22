@@ -27,9 +27,11 @@ export class VoiceMDProtocolHandler {
 
 		await this.waitForLayoutReady();
 
+		let openedPath: string | undefined;
 		const targetPath = this.getTargetPath(data);
 		if (targetPath) {
 			const file = await this.openOrCreateMarkdownFile(targetPath);
+			openedPath = file.path;
 			await this.app.workspace.getLeaf(false).openFile(file, { active: true });
 		}
 
@@ -40,7 +42,11 @@ export class VoiceMDProtocolHandler {
 		}
 
 		const autoStart = this.isTruthy(this.getParam(data, 'autostart'));
-		this.createVoiceCommand().execute(editor, { autoStart });
+		this.createVoiceCommand().execute(editor, {
+			autoStart,
+			insertionMode: 'append-to-end',
+			targetPath: openedPath,
+		});
 	}
 
 	private getTargetPath(data: ObsidianProtocolData): string | undefined {

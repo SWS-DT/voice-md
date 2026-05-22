@@ -58,7 +58,7 @@ Voice MD registers an Obsidian URL action that you can run from iOS Shortcuts. R
 obsidian://voice-md?record=true&daily=true&autostart=true
 ```
 
-Set **Daily note folder** and **Daily note date format** in **Settings → Voice MD** to match your Daily Notes settings. The URL opens or creates today's note, waits for the editor, and starts recording immediately. A bare `obsidian://voice-md` URL is ignored, and `record=true` without `autostart=true` opens the recording modal without starting the microphone. In multi-vault setups, include `vault=Your%20Vault` if needed and test on your device.
+Set **Daily note folder** and **Daily note date format** in **Settings → Voice MD** to match your Daily Notes settings. The URL opens or creates today's note, waits for the editor, and starts recording immediately. When you stop recording, Voice MD appends a new section at the end titled with the current time. A bare `obsidian://voice-md` URL is ignored, and `record=true` without `autostart=true` opens the recording modal without starting the microphone. In multi-vault setups, include `vault=Your%20Vault` if needed and test on your device.
 
 You can also compute the file path in Shortcuts and pass it explicitly:
 
@@ -80,6 +80,7 @@ Add a Shortcut with **Open URLs**, paste one of the URLs above, then assign it t
 | Retain failed audio | Days to keep local audio for pending/failed retry jobs. Successful audio is deleted after completion | 7 |
 | Daily note folder | Folder used by `obsidian://voice-md?...daily=true` shortcuts | Vault root |
 | Daily note date format | Date format used by daily-note shortcuts | `YYYY-MM-DD` |
+| Use 24-hour time | Use 24-hour timestamps for URL-appended recordings | On |
 | Language | Force a language code, or leave blank for auto-detect | Auto |
 | Enable post-processing | Default for the post-processing checkbox | Off |
 | Chat model | GPT model used for post-processing | `gpt-4o-mini` |

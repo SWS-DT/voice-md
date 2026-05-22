@@ -124,8 +124,7 @@ export class OpenAIClient {
 						content: `Format the following transcription as clear markdown:\n\n${rawText}`
 					}
 				],
-				temperature: 0.3,
-				max_tokens: 4096
+				temperature: 0.3
 			});
 
 			return completion.choices[0].message.content || rawText;

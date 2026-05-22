@@ -17,6 +17,7 @@ const DEFAULT_SETTINGS: VoiceMDSettings = {
 	failedAudioRetentionDays: 7,
 	dailyNoteFolder: '',
 	dailyNoteFormat: 'YYYY-MM-DD',
+	use24HourTime: true,
 };
 
 export default class VoiceMDPlugin extends Plugin {
@@ -252,6 +253,16 @@ class VoiceMDSettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.dailyNoteFormat)
 				.onChange(async (value) => {
 					this.plugin.settings.dailyNoteFormat = value.trim() || 'YYYY-MM-DD';
+					await this.plugin.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Use 24-hour time')
+			.setDesc('Use 24-hour timestamps for recordings appended by iOS shortcut URLs. Turn off for am/pm.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.use24HourTime)
+				.onChange(async (value) => {
+					this.plugin.settings.use24HourTime = value;
 					await this.plugin.saveSettings();
 				}));
 

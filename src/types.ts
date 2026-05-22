@@ -13,6 +13,7 @@ export interface VoiceMDSettings {
 	failedAudioRetentionDays: number;
 	dailyNoteFolder: string;
 	dailyNoteFormat: string;
+	use24HourTime: boolean;
 }
 
 export interface VoiceMDStoredData {
@@ -39,6 +40,8 @@ export interface TranscriptionJob {
 	language?: string;
 	chatModel: string;
 	postProcessingPrompt?: string;
+	insertionMode?: 'cursor' | 'append-to-end';
+	targetPath?: string;
 	rawPath?: string;
 	structuredPath?: string;
 }
