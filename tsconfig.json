@@ -3,19 +3,24 @@
     "inlineSourceMap": true,
     "inlineSources": true,
     "module": "ESNext",
-    "target": "ES2022",
-    "allowJs": true,
-    "noImplicitAny": true,
+    "target": "ES2021",
+    "strict": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
     "moduleResolution": "bundler",
     "importHelpers": true,
     "isolatedModules": true,
-    "strictNullChecks": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowSyntheticDefaultImports": true,
     "lib": [
       "DOM",
-      "ES2022"
+      "ES2021"
     ]
   },
   "include": [
-    "**/*.ts"
+    "main.ts",
+    "src/**/*.ts"
   ]
 }

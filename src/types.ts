@@ -91,6 +91,7 @@ export type VoiceMDErrorType =
 	| { type: 'API_ERROR'; code: string; message: string }
 	| { type: 'NETWORK_ERROR'; message: string }
 	| { type: 'INVALID_API_KEY'; message: string }
+	| { type: 'INSUFFICIENT_QUOTA'; message: string }
 	| { type: 'POST_PROCESSING_ERROR'; message: string }
 	| { type: 'AUDIO_TOO_LARGE'; message: string };
 

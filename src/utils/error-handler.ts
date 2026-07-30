@@ -1,6 +1,8 @@
 import { Notice } from 'obsidian';
 import { VoiceMDError, VoiceMDErrorType } from '../types';
 
+const OPENAI_BILLING_URL = 'https://platform.openai.com/settings/organization/billing/overview';
+
 /**
  * ErrorHandler provides centralized error handling and user-friendly messages
  */
@@ -14,6 +16,10 @@ export class ErrorHandler {
 		let message = 'An unknown error occurred';
 
 		if (error instanceof VoiceMDError) {
+			if (error.errorType === 'INSUFFICIENT_QUOTA') {
+				new Notice(this.createBillingNotice(), 12000);
+				return;
+			}
 			message = this.getErrorMessage(error);
 		} else if (error instanceof Error) {
 			// Handle standard Error objects
@@ -42,6 +48,9 @@ export class ErrorHandler {
 
 			case 'INVALID_API_KEY':
 				return 'Invalid OpenAI API key. Please check your settings and try again.';
+
+			case 'INSUFFICIENT_QUOTA':
+				return error.message;
 
 			case 'API_ERROR':
 				return `OpenAI API error (${error.code}): ${error.message}`;
@@ -89,6 +98,11 @@ export class ErrorHandler {
 			errorInfo = {
 				type: 'INVALID_API_KEY',
 				message: 'Invalid or missing API key'
+			};
+		} else if (error.status === 429 && (error.code === 'insufficient_quota' || error.code === 'billing_hard_limit_reached')) {
+			errorInfo = {
+				type: 'INSUFFICIENT_QUOTA',
+				message: 'Your OpenAI API credits are unavailable or exhausted.'
 			};
 		} else if (error.status === 429) {
 			if (isPostProcessing) {
@@ -140,6 +154,20 @@ export class ErrorHandler {
 		}
 
 		return new VoiceMDError(errorInfo);
+	}
+
+	private static createBillingNotice(): DocumentFragment {
+		const fragment = document.createDocumentFragment();
+		fragment.append('Your OpenAI API credits are unavailable or exhausted. Add credits: ');
+
+		const link = document.createElement('a');
+		link.href = OPENAI_BILLING_URL;
+		link.textContent = OPENAI_BILLING_URL;
+		link.target = '_blank';
+		link.rel = 'noopener noreferrer';
+		fragment.append(link);
+
+		return fragment;
 	}
 
 	static audioTooLarge(actualBytes: number, maxBytes: number): VoiceMDError {

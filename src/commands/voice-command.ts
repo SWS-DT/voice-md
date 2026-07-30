@@ -1,4 +1,4 @@
-import { App, Editor, Notice, Plugin, TFile } from 'obsidian';
+import { App, Editor, Notice, Plugin } from 'obsidian';
 import { RecordingModal } from '../audio/audio-modal';
 import { OpenAIClient } from '../api/openai-client';
 import { ErrorHandler } from '../utils/error-handler';
@@ -189,11 +189,12 @@ export class VoiceCommand {
 	}
 
 	private async appendToFile(path: string, text: string): Promise<void> {
-		const target = this.app.vault.getAbstractFileByPath(path);
-		if (!(target instanceof TFile)) return;
-		const existing = await this.app.vault.read(target);
-		const prefix = existing.trim() ? '\n\n' : '';
-		await this.app.vault.modify(target, `${existing}${prefix}${text.trim()}\n`);
+		const target = this.app.vault.getFileByPath(path);
+		if (!target) return;
+		await this.app.vault.process(target, (existing) => {
+			const prefix = existing.trim() ? '\n\n' : '';
+			return `${existing}${prefix}${text.trim()}\n`;
+		});
 	}
 
 	private createRecordingBlock(insertionText: string): string {

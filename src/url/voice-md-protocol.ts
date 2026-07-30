@@ -1,4 +1,4 @@
-import { App, MarkdownView, moment, normalizePath, Notice, ObsidianProtocolData, TFile, TFolder } from 'obsidian';
+import { App, MarkdownView, moment, normalizePath, Notice, ObsidianProtocolData, TFile } from 'obsidian';
 import { VoiceCommand } from '../commands/voice-command';
 import { VoiceMDSettings } from '../types';
 
@@ -66,14 +66,14 @@ export class VoiceMDProtocolHandler {
 
 	private async openOrCreateMarkdownFile(path: string): Promise<TFile> {
 		const normalizedPath = this.ensureMarkdownPath(path);
-		const existing = this.app.vault.getAbstractFileByPath(normalizedPath);
-		if (existing instanceof TFile) {
-			if (existing.extension !== 'md') {
+		const existingFile = this.app.vault.getFileByPath(normalizedPath);
+		if (existingFile) {
+			if (existingFile.extension !== 'md') {
 				throw new Error('Shortcut target must be a markdown file.');
 			}
-			return existing;
+			return existingFile;
 		}
-		if (existing) {
+		if (this.app.vault.getFolderByPath(normalizedPath)) {
 			throw new Error('Shortcut target path is a folder.');
 		}
 
@@ -88,11 +88,10 @@ export class VoiceMDProtocolHandler {
 
 		for (const part of parts) {
 			currentPath = currentPath ? `${currentPath}/${part}` : part;
-			const existing = this.app.vault.getAbstractFileByPath(currentPath);
-			if (existing instanceof TFolder) {
+			if (this.app.vault.getFolderByPath(currentPath)) {
 				continue;
 			}
-			if (existing) {
+			if (this.app.vault.getFileByPath(currentPath)) {
 				throw new Error(`Cannot create folder ${currentPath}; a file already exists there.`);
 			}
 			await this.app.vault.createFolder(currentPath);
@@ -135,6 +134,9 @@ export class VoiceMDProtocolHandler {
 		}
 
 		const fileName = normalizedParts[normalizedParts.length - 1];
+		if (!fileName) {
+			throw new Error('Shortcut target path is invalid.');
+		}
 		if (/\.[^/.]+$/.test(fileName) && !fileName.toLowerCase().endsWith('.md')) {
 			throw new Error('Shortcut target must be a markdown file.');
 		}

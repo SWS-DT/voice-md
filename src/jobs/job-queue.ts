@@ -89,7 +89,7 @@ export class JobQueue {
 }
 
 export function isRetryableJobError(errorType: string | undefined): boolean {
-	return errorType === 'NETWORK_ERROR' || errorType === 'API_ERROR' || errorType === 'POST_PROCESSING_ERROR';
+	return errorType === 'NETWORK_ERROR' || errorType === 'API_ERROR' || errorType === 'POST_PROCESSING_ERROR' || errorType === 'INSUFFICIENT_QUOTA';
 }
 
 export function isJobStatus(value: string): value is TranscriptionJobStatus {

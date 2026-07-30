@@ -14,8 +14,8 @@ export class RecordingModal extends Modal {
 	private stopBtn!: HTMLButtonElement;
 	private cancelBtn!: HTMLButtonElement;
 	private timerInterval: number | null = null;
-	private meetingModeEnabled: boolean = false;
-	private postProcessingEnabled: boolean = false;
+	private meetingModeEnabled = false;
+	private postProcessingEnabled = false;
 	private onRecordingComplete: (blob: Blob, enableMeetingMode: boolean, enablePostProcessing: boolean) => void | Promise<void>;
 	private maxDuration: number;
 	private autoStart: boolean;
@@ -46,8 +46,7 @@ export class RecordingModal extends Modal {
 		contentEl.addClass('voice-md-recording-modal');
 		contentEl.empty();
 
-		// Title
-		contentEl.createEl('h2', { text: 'Voice recording' });
+		this.setTitle('Voice recording');
 
 		// Status indicator
 		this.statusEl = contentEl.createDiv({ cls: 'voice-md-status' });
@@ -62,7 +61,7 @@ export class RecordingModal extends Modal {
 		const meetingModeLabel = meetingModeContainer.createEl('label');
 		const meetingModeCheckbox = meetingModeLabel.createEl('input', { type: 'checkbox' });
 		meetingModeCheckbox.checked = false; // Default: unchecked
-		meetingModeLabel.appendText(' Enable Meeting Mode (Speaker Identification)');
+		meetingModeLabel.appendText(' Enable meeting mode (speaker identification)');
 
 		// Wire change handler
 		meetingModeCheckbox.addEventListener('change', () => {
@@ -74,7 +73,7 @@ export class RecordingModal extends Modal {
 		const postProcessingLabel = postProcessingContainer.createEl('label');
 		const postProcessingCheckbox = postProcessingLabel.createEl('input', { type: 'checkbox' });
 		postProcessingCheckbox.checked = this.postProcessingEnabled; // Default from global setting
-		postProcessingLabel.appendText(' Enable Post-Processing (Smart Formatting)');
+		postProcessingLabel.appendText(' Enable post-processing (smart formatting)');
 
 		// Wire change handler - updates both instance state and global settings
 		postProcessingCheckbox.addEventListener('change', () => {

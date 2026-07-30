@@ -127,7 +127,7 @@ export class OpenAIClient {
 				temperature: 0.3
 			});
 
-			return completion.choices[0].message.content || rawText;
+			return completion.choices[0]?.message.content || rawText;
 
 		} catch (error) {
 			// Convert to VoiceMDError and throw

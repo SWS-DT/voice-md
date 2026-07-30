@@ -73,9 +73,9 @@ export class AudioRecorder {
 
 			if (error instanceof DOMException) {
 				if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-					throw new Error('PERMISSION_DENIED', { cause: error });
+					throw Object.assign(new Error('PERMISSION_DENIED'), { cause: error });
 				} else if (error.name === 'NotFoundError') {
-					throw new Error('NO_MICROPHONE', { cause: error });
+					throw Object.assign(new Error('NO_MICROPHONE'), { cause: error });
 				}
 			}
 
