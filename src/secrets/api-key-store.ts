@@ -49,7 +49,11 @@ export class ApiKeyStore {
 	}
 
 	private getSecretStorage(): SecretStorageLike | null {
-		const candidate = (this.app as App & { secretStorage?: SecretStorageLike }).secretStorage;
-		return candidate && typeof candidate.getSecret === 'function' && typeof candidate.setSecret === 'function' ? candidate : null;
+		const candidate = (this.app as unknown as Record<string, unknown>)['secretStorage'];
+		if (!candidate || typeof candidate !== 'object') return null;
+		const storage = candidate as Partial<SecretStorageLike>;
+		return typeof storage.getSecret === 'function' && typeof storage.setSecret === 'function'
+			? storage as SecretStorageLike
+			: null;
 	}
 }

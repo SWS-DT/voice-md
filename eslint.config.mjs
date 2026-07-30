@@ -13,13 +13,15 @@ export default tseslint.config(
   },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,
+  ...obsidianEslint.configs.recommended,
+  {
+    files: ["tests/**/*.ts"],
+    rules: {
+      "obsidianmd/no-nodejs-modules": "off",
+    }
+  },
   {
     files: ["**/*.ts"],
-    ...obsidianEslint.configs.recommended.reduce((merged, config) => ({
-      ...merged,
-      plugins: { ...merged.plugins, ...config.plugins },
-      rules: { ...merged.rules, ...config.rules },
-    }), { plugins: {}, rules: {} }),
     languageOptions: {
       parserOptions: {
         projectService: true,

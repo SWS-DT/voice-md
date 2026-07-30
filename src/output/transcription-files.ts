@@ -29,7 +29,7 @@ export class TranscriptionFiles {
 		const folderPath = normalizePath('Voice Transcriptions');
 		const existing = this.app.vault.getAbstractFileByPath(folderPath);
 		if (!existing) {
-			await this.app.vault.createFolder(folderPath);
+			await this.app.vault.adapter.mkdir(folderPath);
 		} else if (!(existing instanceof TFolder)) {
 			throw new Error('Voice Transcriptions exists but is not a folder.');
 		}

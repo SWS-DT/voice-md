@@ -17,6 +17,10 @@ export class VoiceMDSettingTab extends PluginSettingTab {
 	}
 
 	display(): void {
+		this.renderSettings();
+	}
+
+	private renderSettings(): void {
 		const { containerEl } = this;
 
 		containerEl.empty();
@@ -45,10 +49,9 @@ export class VoiceMDSettingTab extends PluginSettingTab {
 			})
 			.addButton(button => button
 				.setButtonText('Clear')
-				.setTooltip('Clear the saved API key')
 				.onClick(async () => {
 					await this.plugin.getApiKeyStore().setApiKey('');
-					this.display();
+					this.renderSettings();
 				}));
 
 		new Setting(containerEl)
@@ -114,8 +117,7 @@ export class VoiceMDSettingTab extends PluginSettingTab {
 			.setName('Daily note date format')
 			.setDesc('Date format for iOS shortcut daily-note URLs. Match your daily notes settings.')
 			.addText(text => text
-				// eslint-disable-next-line obsidianmd/ui/sentence-case -- Moment date format tokens are case-sensitive.
-				.setPlaceholder('YYYY-MM-DD')
+				.setPlaceholder('Enter a date format')
 				.setValue(this.plugin.pluginSettings.dailyNoteFormat)
 				.onChange(async (value) => {
 					this.plugin.pluginSettings.dailyNoteFormat = value.trim() || 'YYYY-MM-DD';
@@ -151,7 +153,7 @@ export class VoiceMDSettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.pluginSettings.enablePostProcessing = value;
 					await this.plugin.saveSettings();
-					this.display();
+					this.renderSettings();
 				}));
 
 		if (this.plugin.pluginSettings.enablePostProcessing) {
@@ -171,14 +173,14 @@ export class VoiceMDSettingTab extends PluginSettingTab {
 						.onChange(async (value) => {
 							if (value === CUSTOM_CHAT_MODEL_OPTION) {
 								this.showCustomModelInput = true;
-								this.display();
+								this.renderSettings();
 								return;
 							}
 
 							this.showCustomModelInput = false;
 							this.plugin.pluginSettings.chatModel = value;
 							await this.plugin.saveSettings();
-							this.display();
+							this.renderSettings();
 						});
 				});
 
@@ -188,21 +190,20 @@ export class VoiceMDSettingTab extends PluginSettingTab {
 					const model = customModelDraft.trim();
 					this.showCustomModelInput = false;
 					if (!model) {
-						this.display();
+						this.renderSettings();
 						return;
 					}
 
 					this.plugin.pluginSettings.chatModel = normalizeChatModel(model);
 					await this.plugin.saveSettings();
-					this.display();
+					this.renderSettings();
 				};
 
 				new Setting(containerEl)
 					.setName('Custom model name')
 					.setDesc('Enter the exact model ID from OpenAI, then select Save or press Enter. Leave it blank to cancel.')
 					.addText(text => {
-						// eslint-disable-next-line obsidianmd/ui/sentence-case -- OpenAI model IDs are lowercase and case-sensitive.
-						text.setPlaceholder('gpt-5.6-terra')
+						text.setPlaceholder('Enter an OpenAI model ID')
 							.setValue(customModelDraft)
 							.onChange((value) => {
 								customModelDraft = value;
@@ -219,7 +220,7 @@ export class VoiceMDSettingTab extends PluginSettingTab {
 						.setButtonText('Cancel')
 						.onClick(() => {
 							this.showCustomModelInput = false;
-							this.display();
+							this.renderSettings();
 						}));
 			}
 

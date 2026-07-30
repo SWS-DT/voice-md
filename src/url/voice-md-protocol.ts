@@ -32,7 +32,14 @@ export class VoiceMDProtocolHandler {
 		if (targetPath) {
 			const file = await this.openOrCreateMarkdownFile(targetPath);
 			openedPath = file.path;
-			await this.app.workspace.getLeaf(false).openFile(file, { active: true });
+			const workspace = this.app.workspace as unknown as {
+				getLeaf?: (newLeaf?: boolean) => { openFile(file: TFile): Promise<void> };
+				getUnpinnedLeaf(): { openFile(file: TFile): Promise<void> };
+			};
+			const leaf = typeof workspace.getLeaf === 'function'
+				? workspace.getLeaf(false)
+				: workspace.getUnpinnedLeaf();
+			await leaf.openFile(file);
 		}
 
 		const editor = await this.waitForActiveEditor();
@@ -95,7 +102,7 @@ export class VoiceMDProtocolHandler {
 			if (existing) {
 				throw new Error(`Cannot create folder ${currentPath}; a file already exists there.`);
 			}
-			await this.app.vault.createFolder(currentPath);
+			await this.app.vault.adapter.mkdir(currentPath);
 		}
 	}
 

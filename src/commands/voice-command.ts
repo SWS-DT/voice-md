@@ -197,16 +197,9 @@ export class VoiceCommand {
 			return `${existing}${prefix}${text.trim()}\n`;
 		};
 
-		const vault = this.app.vault as typeof this.app.vault & {
-			process?: (file: TFile, update: (existing: string) => string) => Promise<string>;
-		};
-		if (typeof vault.process === 'function') {
-			await vault.process(target, append);
-			return;
-		}
-
 		const existing = await this.app.vault.read(target);
-		await this.app.vault.modify(target, append(existing));
+		const updated = append(existing);
+		await this.app.vault.append(target, updated.slice(existing.length));
 	}
 
 	private createRecordingBlock(insertionText: string): string {

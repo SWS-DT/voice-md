@@ -157,15 +157,17 @@ export class ErrorHandler {
 	}
 
 	private static createBillingNotice(): DocumentFragment {
-		const fragment = document.createDocumentFragment();
+		const fragment = createFragment();
 		fragment.append('Your OpenAI API credits are unavailable or exhausted. Add credits: ');
 
-		const link = document.createElement('a');
-		link.href = OPENAI_BILLING_URL;
-		link.textContent = OPENAI_BILLING_URL;
-		link.target = '_blank';
-		link.rel = 'noopener noreferrer';
-		fragment.append(link);
+		fragment.createEl('a', {
+			text: OPENAI_BILLING_URL,
+			href: OPENAI_BILLING_URL,
+			attr: {
+				target: '_blank',
+				rel: 'noopener noreferrer',
+			},
+		});
 
 		return fragment;
 	}
