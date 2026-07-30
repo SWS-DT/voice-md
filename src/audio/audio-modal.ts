@@ -46,7 +46,7 @@ export class RecordingModal extends Modal {
 		contentEl.addClass('voice-md-recording-modal');
 		contentEl.empty();
 
-		this.setTitle('Voice recording');
+		contentEl.createEl('h2', { text: 'Voice recording' });
 
 		// Status indicator
 		this.statusEl = contentEl.createDiv({ cls: 'voice-md-status' });

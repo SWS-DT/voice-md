@@ -5,6 +5,18 @@ All notable changes to Voice MD will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-07-30
+
+### Changed
+- Replaced the free-form post-processing model field with a curated, labeled model selector while retaining a custom model option.
+- New installations now default to `gpt-5.4-mini` for post-processing.
+
+### Fixed
+- Post-processing now works with models that reject custom temperature values, including GPT-5 family models.
+- Blank custom model drafts now cancel without changing the active model.
+- Completion notices now accurately report when only the raw transcript was saved.
+- Preserved compatibility with Obsidian 0.15.0 while using safer atomic file updates when available.
+
 ## [1.4.0] - 2026-05-22
 
 ### Added
@@ -141,6 +153,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OpenAI SDK v4.20.0 integration
 - Desktop-only initial release (changed in 1.0.1)
 
+[1.5.0]: https://github.com/DenizOkcu/voice-md/releases/tag/1.5.0
 [1.4.0]: https://github.com/DenizOkcu/voice-md/releases/tag/1.4.0
 [1.2.6]: https://github.com/DenizOkcu/voice-md/releases/tag/1.2.6
 [1.2.3]: https://github.com/DenizOkcu/voice-md/releases/tag/1.2.3

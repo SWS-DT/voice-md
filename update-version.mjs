@@ -25,6 +25,17 @@ if (isBeta && !newVersion.includes("-")) {
   versionWithSuffix = `${newVersion}-beta`;
 }
 
+try {
+  const status = execSync("git status --porcelain", { encoding: "utf8" }).trim();
+  if (status) {
+    console.error("Error: Commit or discard existing changes before updating the version.");
+    process.exit(1);
+  }
+} catch (error) {
+  console.error("Error: Unable to verify the Git working tree:", error.message);
+  process.exit(1);
+}
+
 console.log(`Updating to version ${versionWithSuffix}${isBeta ? " (beta)" : ""}`);
 
 // Update package.json
@@ -35,6 +46,20 @@ try {
   console.log("✅ Updated package.json");
 } catch (error) {
   console.error("❌ Failed to update package.json:", error.message);
+  process.exit(1);
+}
+
+// Update package-lock.json
+try {
+  const packageLock = JSON.parse(readFileSync("package-lock.json", "utf8"));
+  packageLock.version = versionWithSuffix;
+  if (packageLock.packages?.[""]) {
+    packageLock.packages[""].version = versionWithSuffix;
+  }
+  writeFileSync("package-lock.json", JSON.stringify(packageLock, null, 2) + "\n");
+  console.log("✅ Updated package-lock.json");
+} catch (error) {
+  console.error("❌ Failed to update package-lock.json:", error.message);
   process.exit(1);
 }
 
@@ -72,8 +97,7 @@ try {
 
 // Create git commit and tag
 try {
-  // Only include manifest.json in the commit for non-beta versions
-  const filesToCommit = isBeta ? ["package.json", "versions.json"] : ["package.json", "manifest.json", "versions.json"];
+  const filesToCommit = ["package.json", "package-lock.json", "manifest.json", "versions.json"];
 
   execSync(`git add ${filesToCommit.join(" ")}`);
   execSync(`git commit -m "Bump version to ${versionWithSuffix}${isBeta ? " (beta)" : ""}"`);
@@ -90,4 +114,5 @@ try {
 } catch (error) {
   console.error("❌ Failed to create git commit or tag:", error.message);
   console.log("You may need to commit and tag manually.");
+  process.exit(1);
 }

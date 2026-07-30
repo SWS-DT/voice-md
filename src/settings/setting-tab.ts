@@ -1,8 +1,15 @@
 import { App, MarkdownView, normalizePath, PluginSettingTab, Setting } from 'obsidian';
 import type VoiceMDPlugin from '../../main';
+import {
+	CURATED_CHAT_MODELS,
+	CUSTOM_CHAT_MODEL_OPTION,
+	isCuratedChatModel,
+	normalizeChatModel,
+} from './chat-models';
 
 export class VoiceMDSettingTab extends PluginSettingTab {
 	readonly plugin: VoiceMDPlugin;
+	private showCustomModelInput = false;
 
 	constructor(app: App, plugin: VoiceMDPlugin) {
 		super(app, plugin);
@@ -148,16 +155,73 @@ export class VoiceMDSettingTab extends PluginSettingTab {
 				}));
 
 		if (this.plugin.pluginSettings.enablePostProcessing) {
+			const configuredModel = normalizeChatModel(this.plugin.pluginSettings.chatModel);
+			const hasCustomModel = !isCuratedChatModel(configuredModel);
+			const showCustomModel = this.showCustomModelInput || hasCustomModel;
+
 			new Setting(containerEl)
 				.setName('Chat model')
-				.setDesc('OpenAI model for post-processing (e.g., gpt-4o-mini, gpt-4o), note: adds cost per transcription')
-				.addText(text => text
-					.setPlaceholder('gpt-4o-mini')
-					.setValue(this.plugin.pluginSettings.chatModel)
-					.onChange(async (value) => {
-						this.plugin.pluginSettings.chatModel = value || 'gpt-4o-mini';
-						await this.plugin.saveSettings();
-					}));
+				.setDesc('Choose a curated post-processing model, or select Custom model to enter any OpenAI model ID. Availability and cost depend on your OpenAI account.')
+				.addDropdown(dropdown => {
+					for (const [model, label] of CURATED_CHAT_MODELS) {
+						dropdown.addOption(model, label);
+					}
+					dropdown.addOption(CUSTOM_CHAT_MODEL_OPTION, 'Custom model…')
+						.setValue(showCustomModel ? CUSTOM_CHAT_MODEL_OPTION : configuredModel)
+						.onChange(async (value) => {
+							if (value === CUSTOM_CHAT_MODEL_OPTION) {
+								this.showCustomModelInput = true;
+								this.display();
+								return;
+							}
+
+							this.showCustomModelInput = false;
+							this.plugin.pluginSettings.chatModel = value;
+							await this.plugin.saveSettings();
+							this.display();
+						});
+				});
+
+			if (showCustomModel) {
+				let customModelDraft = hasCustomModel ? configuredModel : '';
+				const saveCustomModel = async () => {
+					const model = customModelDraft.trim();
+					this.showCustomModelInput = false;
+					if (!model) {
+						this.display();
+						return;
+					}
+
+					this.plugin.pluginSettings.chatModel = normalizeChatModel(model);
+					await this.plugin.saveSettings();
+					this.display();
+				};
+
+				new Setting(containerEl)
+					.setName('Custom model name')
+					.setDesc('Enter the exact model ID from OpenAI, then select Save or press Enter. Leave it blank to cancel.')
+					.addText(text => {
+						// eslint-disable-next-line obsidianmd/ui/sentence-case -- OpenAI model IDs are lowercase and case-sensitive.
+						text.setPlaceholder('gpt-5.6-terra')
+							.setValue(customModelDraft)
+							.onChange((value) => {
+								customModelDraft = value;
+							});
+						text.inputEl.addEventListener('keydown', (event) => {
+							if (event.key === 'Enter') void saveCustomModel();
+						});
+					})
+					.addButton(button => button
+						.setButtonText('Save')
+						.setCta()
+						.onClick(saveCustomModel))
+					.addButton(button => button
+						.setButtonText('Cancel')
+						.onClick(() => {
+							this.showCustomModelInput = false;
+							this.display();
+						}));
+			}
 
 			new Setting(containerEl)
 				.setName('Custom formatting prompt')

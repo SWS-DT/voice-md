@@ -1,4 +1,4 @@
-import { App, normalizePath } from 'obsidian';
+import { App, normalizePath, TFolder } from 'obsidian';
 
 export interface TranscriptionFileResult {
 	rawPath: string;
@@ -27,12 +27,11 @@ export class TranscriptionFiles {
 
 	private async ensureFolder(): Promise<string> {
 		const folderPath = normalizePath('Voice Transcriptions');
-		const existingFolder = this.app.vault.getFolderByPath(folderPath);
-		if (!existingFolder) {
-			if (this.app.vault.getFileByPath(folderPath)) {
-				throw new Error('Voice Transcriptions exists but is not a folder.');
-			}
+		const existing = this.app.vault.getAbstractFileByPath(folderPath);
+		if (!existing) {
 			await this.app.vault.createFolder(folderPath);
+		} else if (!(existing instanceof TFolder)) {
+			throw new Error('Voice Transcriptions exists but is not a folder.');
 		}
 		return folderPath;
 	}
@@ -41,7 +40,7 @@ export class TranscriptionFiles {
 		const stamp = `${timestamp.getFullYear()}-${String(timestamp.getMonth() + 1).padStart(2, '0')}-${String(timestamp.getDate()).padStart(2, '0')}-${String(timestamp.getHours()).padStart(2, '0')}${String(timestamp.getMinutes()).padStart(2, '0')}${String(timestamp.getSeconds()).padStart(2, '0')}`;
 		let baseName = `transcription-${stamp}`;
 		let suffix = 1;
-		while (this.app.vault.getFileByPath(`${folderPath}/${baseName}-raw.md`) || this.app.vault.getFileByPath(`${folderPath}/${baseName}.md`)) {
+		while (this.app.vault.getAbstractFileByPath(`${folderPath}/${baseName}-raw.md`) || this.app.vault.getAbstractFileByPath(`${folderPath}/${baseName}.md`)) {
 			baseName = `transcription-${stamp}-${suffix}`;
 			suffix++;
 		}

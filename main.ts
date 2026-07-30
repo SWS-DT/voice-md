@@ -6,6 +6,7 @@ import { JobQueue } from './src/jobs/job-queue';
 import { ApiKeyStore } from './src/secrets/api-key-store';
 import { VoiceMDProtocolHandler } from './src/url/voice-md-protocol';
 import { DEFAULT_SETTINGS } from './src/settings/defaults';
+import { normalizeChatModel } from './src/settings/chat-models';
 import { VoiceMDSettingTab } from './src/settings/setting-tab';
 
 export default class VoiceMDPlugin extends Plugin {
@@ -83,20 +84,20 @@ export default class VoiceMDPlugin extends Plugin {
 
 	async loadSettings() {
 		const loaded = await this.loadData() as Partial<VoiceMDStoredData> & Partial<VoiceMDSettings> | null;
-		if (loaded && 'settings' in loaded) {
-			this.storedData = {
-				schemaVersion: 2,
-				settings: Object.assign({}, DEFAULT_SETTINGS, loaded.settings),
-				jobs: Array.isArray(loaded.jobs) ? loaded.jobs : [],
-			};
-		} else {
-			this.storedData = {
-				schemaVersion: 2,
-				settings: Object.assign({}, DEFAULT_SETTINGS, loaded ?? {}),
-				jobs: [],
-			};
-		}
-		this.pluginSettings = this.storedData.settings;
+		const hasStoredDataEnvelope = loaded !== null && 'settings' in loaded;
+		const settings = Object.assign({}, DEFAULT_SETTINGS, hasStoredDataEnvelope ? loaded.settings : loaded ?? {});
+		settings.chatModel = normalizeChatModel(settings.chatModel);
+
+		const jobs = hasStoredDataEnvelope && Array.isArray(loaded.jobs)
+			? loaded.jobs.map((job) => ({ ...job, chatModel: normalizeChatModel(job.chatModel) }))
+			: [];
+
+		this.storedData = {
+			schemaVersion: 2,
+			settings,
+			jobs,
+		};
+		this.pluginSettings = settings;
 		await this.saveStoredData();
 	}
 

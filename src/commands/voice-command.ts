@@ -1,4 +1,4 @@
-import { App, Editor, Notice, Plugin } from 'obsidian';
+import { App, Editor, Notice, Plugin, TFile } from 'obsidian';
 import { RecordingModal } from '../audio/audio-modal';
 import { OpenAIClient } from '../api/openai-client';
 import { ErrorHandler } from '../utils/error-handler';
@@ -144,7 +144,7 @@ export class VoiceCommand {
 			await this.jobQueue.markSucceeded(processingJob.id, raw.rawPath, structuredPath);
 			await this.audioStore.delete(processingJob.audioKey).catch(() => undefined);
 			activeNotice.hide();
-			new Notice(processingJob.enablePostProcessing ? 'Transcription complete, files saved to Voice Transcriptions' : 'Transcription complete, raw file saved', 5000);
+			new Notice(structuredPath ? 'Transcription complete, raw and structured files saved' : 'Transcription complete, raw file saved', 5000);
 		} catch (error) {
 			activeNotice.hide();
 			const retryable = error instanceof VoiceMDError ? isRetryableJobError(error.errorType) : true;
@@ -189,12 +189,24 @@ export class VoiceCommand {
 	}
 
 	private async appendToFile(path: string, text: string): Promise<void> {
-		const target = this.app.vault.getFileByPath(path);
-		if (!target) return;
-		await this.app.vault.process(target, (existing) => {
+		const target = this.app.vault.getAbstractFileByPath(path);
+		if (!(target instanceof TFile)) return;
+
+		const append = (existing: string) => {
 			const prefix = existing.trim() ? '\n\n' : '';
 			return `${existing}${prefix}${text.trim()}\n`;
-		});
+		};
+
+		const vault = this.app.vault as typeof this.app.vault & {
+			process?: (file: TFile, update: (existing: string) => string) => Promise<string>;
+		};
+		if (typeof vault.process === 'function') {
+			await vault.process(target, append);
+			return;
+		}
+
+		const existing = await this.app.vault.read(target);
+		await this.app.vault.modify(target, append(existing));
 	}
 
 	private createRecordingBlock(insertionText: string): string {

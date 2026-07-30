@@ -1,8 +1,9 @@
 import type { VoiceMDSettings } from '../types';
+import { DEFAULT_CHAT_MODEL } from './chat-models';
 
 export const DEFAULT_SETTINGS: VoiceMDSettings = {
 	openaiApiKey: '',
-	chatModel: 'gpt-4o-mini',
+	chatModel: DEFAULT_CHAT_MODEL,
 	enablePostProcessing: false,
 	postProcessingPrompt: undefined,
 	language: undefined,

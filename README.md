@@ -107,7 +107,7 @@ Note: if iOS or Android terminates Obsidian while recording is still active, aud
 | Use 24-hour time | Use 24-hour timestamps for URL-appended recordings | On |
 | Language | Force a language code, or leave blank for auto-detect | Auto |
 | Enable post-processing | Default for the post-processing checkbox | Off |
-| Chat model | Model used for post-processing. You can enter a current OpenAI model name | `gpt-4o-mini` |
+| Chat model | Curated model selector for post-processing, with support for custom OpenAI model IDs | `gpt-5.4-mini` |
 | Custom formatting prompt | Override the default formatting instructions | — |
 
 ## Installation

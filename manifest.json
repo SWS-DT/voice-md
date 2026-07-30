@@ -1,8 +1,8 @@
 {
   "id": "voice-md",
   "name": "Voice MD",
-  "version": "1.4.0",
-  "minAppVersion": "1.5.7",
+  "version": "1.5.0",
+  "minAppVersion": "0.15.0",
   "description": "Capture voice notes, meetings, and daily-note recordings as reliable Markdown using OpenAI.",
   "author": "Deniz Okcu",
   "authorUrl": "https://github.com/DenizOkcu",
